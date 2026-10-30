@@ -133,7 +133,38 @@
             <div class="metric-foot">Effective load current</div>
           </article>
         </div>
+        <section class="panel schematic-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Circuit schematic</h2>
+              <p id="schematic-description">
+                Visual representation of the selected rectifier circuit.
+              </p>
+            </div>
+            <span class="schematic-badge" id="schematic-type">
+              Full-wave bridge
+            </span>
+          </div>
 
+          <div
+            class="schematic-stage"
+            id="circuit-schematic"
+            role="img"
+            aria-label="Selected rectifier circuit schematic"
+          >
+            <div class="schematic-placeholder">
+              <span>⚡</span>
+              <p>Loading circuit schematic...</p>
+            </div>
+          </div>
+
+          <div class="panel-footer">
+            <span class="footer-dot"></span>
+            <span id="schematic-caption">
+              Components and connections of the selected circuit
+            </span>
+          </div>
+        </section>
         <div class="content-grid">
           <section class="panel chart-panel">
             <div class="panel-header">

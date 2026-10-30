@@ -222,3 +222,76 @@ tbody tr:hover td { background: #182740; }
 .good-value { color: var(--green); font-weight: 800; }
 .warn-value { color: var(--amber); font-weight: 800; }
 .tiny-status { color: var(--faint); font-size: 10px; margin-left: 4px; }
+
+.schematic-panel {
+    margin-bottom: 24px;
+}
+
+.schematic-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.schematic-stage {
+    width: 100%;
+    min-height: 320px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: #101a2a;
+    border: 1px solid #26354b;
+    border-radius: 12px;
+}
+
+.schematic-placeholder {
+    text-align: center;
+    color: #94a3b8;
+}
+
+.schematic-placeholder span {
+    display: block;
+    font-size: 36px;
+    margin-bottom: 10px;
+}
+
+.schematic-placeholder p {
+    font-size: 13px;
+    margin: 0;
+}
+
+.schematic-panel .panel-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schematic-panel .footer-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #60a5fa;
+}
+
+@media (max-width: 768px) {
+    .schematic-stage {
+        min-height: 260px;
+        padding: 12px;
+    }
+
+    .schematic-badge {
+        font-size: 10px;
+        padding: 5px 8px;
+    }
+}
