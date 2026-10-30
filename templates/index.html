@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RectiLab | Rectifier Simulator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="RectiLab home">
+        <span class="brand-mark">ϟ</span>
+        <span><strong>RectiLab</strong><small>POWER ELECTRONICS LAB</small></span>
+      </a>
+
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Workspace tabs">
+        <button class="nav-item active" data-tab="simulation"><span class="nav-icon">⌁</span> Simulator</button>
+        <button class="nav-item" data-tab="harmonics"><span class="nav-icon">∿</span> Harmonics</button>
+        <button class="nav-item" data-tab="validation"><span class="nav-icon">✓</span> Validation</button>
+        <button class="nav-item" data-tab="guide"><span class="nav-icon">ⓘ</span> Quick guide</button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">CIRCUIT SETUP</div>
+      <form id="config-form" class="config-form">
+        <label for="topology">Rectifier topology</label>
+        <select id="topology" name="topology">
+          <option>Half-wave</option>
+          <option>Half-wave + freewheeling diode</option>
+          <option selected>Full-wave bridge</option>
+          <option>Full-wave centre-tapped</option>
+        </select>
+
+        <label for="device">Switching device</label>
+        <select id="device" name="device">
+          <option selected>Diode (uncontrolled)</option>
+          <option>Thyristor (controlled)</option>
+        </select>
+
+        <label for="load_type">Load model</label>
+        <select id="load_type" name="load_type">
+          <option selected>Resistive (R)</option>
+          <option>Resistive-inductive (R-L)</option>
+        </select>
+
+        <div class="field-grid">
+          <div>
+            <label for="amplitude">Peak voltage <span>(V)</span></label>
+            <input id="amplitude" name="amplitude" type="number" min="0.001" step="any" value="100" required>
+          </div>
+          <div>
+            <label for="frequency">Frequency <span>(Hz)</span></label>
+            <input id="frequency" name="frequency" type="number" min="0.001" step="any" value="50" required>
+          </div>
+          <div>
+            <label for="resistance">Resistance <span>(Ω)</span></label>
+            <input id="resistance" name="resistance" type="number" min="0.001" step="any" value="10" required>
+          </div>
+          <div id="inductance-wrap" class="conditional-field hidden">
+            <label for="inductance">Inductance <span>(H)</span></label>
+            <input id="inductance" name="inductance" type="number" min="0.000001" step="any" value="0.05">
+          </div>
+          <div id="firing-wrap" class="conditional-field hidden">
+            <label for="firing_angle_deg">Firing angle <span>(°)</span></label>
+            <input id="firing_angle_deg" name="firing_angle_deg" type="number" min="0" max="180" step="1" value="30">
+          </div>
+          <div>
+            <label for="cycles">Source cycles</label>
+            <select id="cycles" name="cycles">
+              <option value="1">1 cycle</option>
+              <option value="2">2 cycles</option>
+              <option selected value="3">3 cycles</option>
+              <option value="4">4 cycles</option>
+              <option value="5">5 cycles</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="run-button" type="submit"><span>▶</span> Run simulation</button>
+        <button class="reset-button" type="button" id="reset-button">Reset to defaults</button>
+      </form>
+
+      <div class="sidebar-note">
+        <span class="note-dot"></span>
+        <div><strong>Ideal device model</strong><small>Single-phase · steady-state preview</small></div>
+      </div>
+      <div class="sidebar-footer">SS G514 · OBJECT-ORIENTED DESIGN</div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="breadcrumb">RECTILAB <span>/</span> <b id="breadcrumb-current">SIMULATOR</b></div>
+      </header>
+
+      <section class="page-heading">
+        <div>
+          <div class="eyebrow">ENGINEERING WORKSPACE</div>
+          <h1 id="page-title">Rectifier simulator</h1>
+          <p id="page-subtitle">Configure a circuit, run the model, and inspect its electrical response.</p>
+        </div>
+        <div class="status-badge" id="run-status"><span class="status-dot"></span> Ready to simulate</div>
+      </section>
+
+      <div class="notice" id="notice" role="status" aria-live="polite">
+        <span class="notice-icon">i</span>
+        <span id="notice-text">R-L simulation is supported for the full-wave bridge and full-wave centre-tapped rectifier with an uncontrolled diode.</span>
+        <button type="button" id="dismiss-notice" aria-label="Dismiss message">×</button>
+      </div>
+
+      <section class="tab-panel active" id="panel-simulation">
+        <div class="metric-grid">
+          <article class="metric-card metric-blue">
+            <div class="metric-top"><span>Peak load voltage</span><span class="metric-symbol">V̂</span></div>
+            <div class="metric-value" id="metric-vpeak">— <small>V</small></div>
+            <div class="metric-foot">Absolute peak value</div>
+          </article>
+          <article class="metric-card metric-cyan">
+            <div class="metric-top"><span>Average voltage</span><span class="metric-symbol">VAVG</span></div>
+            <div class="metric-value" id="metric-vavg">— <small>V</small></div>
+            <div class="metric-foot">Mean over sampled cycles</div>
+          </article>
+          <article class="metric-card metric-violet">
+            <div class="metric-top"><span>RMS voltage</span><span class="metric-symbol">VRMS</span></div>
+            <div class="metric-value" id="metric-vrms">— <small>V</small></div>
+            <div class="metric-foot">Effective load voltage</div>
+          </article>
+          <article class="metric-card metric-green">
+            <div class="metric-top"><span>RMS current</span><span class="metric-symbol">IRMS</span></div>
+            <div class="metric-value" id="metric-irms">— <small>A</small></div>
+            <div class="metric-foot">Effective load current</div>
+          </article>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel chart-panel">
+            <div class="panel-header">
+              <div><h2>Waveform analysis</h2><p>Load voltage and current over time</p></div>
+              <span class="chart-legend"><i class="legend-cyan"></i> Voltage <i class="legend-blue"></i> Current</span>
+            </div>
+            <div id="waveform-chart" class="chart-area"></div>
+            <div class="panel-footer">
+              <span class="footer-dot"></span>
+              Sampled time-domain response
+              <span class="footer-spacer"></span>
+
+              <button class="text-button" id="export-csv" type="button">
+                  ↓ Export CSV
+              </button>
+
+              <button class="text-button" id="export-netlist" type="button">
+                  ↓ Export PSpice netlist
+              </button>
+            </div>
+          </section>
+
+          <section class="panel summary-panel">
+            <div class="panel-header"><div><h2>Circuit summary</h2><p>Current configuration</p></div><span class="summary-icon">⌘</span></div>
+            <div class="circuit-visual">
+              <div class="circuit-node"><span class="node-symbol">~</span><b>AC</b><small>Source</small></div>
+              <div class="circuit-wire"><span>→</span></div>
+              <div class="circuit-node rectifier-node"><span class="node-symbol">◇</span><b id="summary-topology">Bridge</b><small id="summary-device">Diode</small></div>
+              <div class="circuit-wire"><span>→</span></div>
+              <div class="circuit-node load-node"><span class="node-symbol">Ω</span><b id="summary-load">R load</b><small id="summary-resistance">10 Ω</small></div>
+            </div>
+            <div class="summary-rows">
+              <div><span>Source amplitude</span><strong id="summary-amplitude">100 V</strong></div>
+              <div><span>Frequency</span><strong id="summary-frequency">50 Hz</strong></div>
+              <div><span>Firing angle</span><strong id="summary-firing">Not applicable</strong></div>
+              <div><span>Input power factor</span><strong id="summary-pf">—</strong></div>
+              <div><span>Current THD</span><strong id="summary-thd">—</strong></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-harmonics">
+        <div class="section-intro">
+          <div class="eyebrow">FREQUENCY DOMAIN</div><h2>Harmonic analysis</h2>
+          <p>Inspect the source-current harmonic spectrum, total harmonic distortion, and input power factor.</p>
+        </div>
+        <div class="metric-grid two-metrics">
+          <article class="metric-card metric-violet"><div class="metric-top"><span>Total harmonic distortion</span><span class="metric-symbol">THD</span></div><div class="metric-value" id="harmonics-thd">— <small>%</small></div><div class="metric-foot">Relative to the fundamental component</div></article>
+          <article class="metric-card metric-green"><div class="metric-top"><span>Input power factor</span><span class="metric-symbol">PF</span></div><div class="metric-value" id="harmonics-pf">—</div><div class="metric-foot">Real power divided by apparent power</div></article>
+        </div>
+        <section class="panel chart-panel">
+          <div class="panel-header"><div><h2>Source-current spectrum</h2><p>Harmonic magnitude by order</p></div></div>
+          <div id="harmonics-chart" class="chart-area harmonic-chart"></div>
+        </section>
+        <section class="panel table-panel">
+          <div class="panel-header"><div><h2>Harmonic components</h2><p>Magnitude of each calculated component</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Harmonic order</th><th>Magnitude (A)</th><th>Relative to fundamental</th></tr></thead><tbody id="harmonics-table"><tr><td colspan="3" class="empty-cell">Run a simulation to calculate harmonic values.</td></tr></tbody></table></div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="panel-validation">
+        <div class="section-intro"><div class="eyebrow">MODEL CHECK</div><h2>Analytical validation</h2><p>Compare numerical samples with the ideal formulas included in the project brief.</p></div>
+        <div class="validation-callout"><span class="callout-icon">✓</span><div><strong>What this checks</strong><p>Average and RMS load voltage for ideal single-phase rectifiers with a resistive load. Small numerical errors are expected because the waveform is sampled at a finite time step.</p></div></div>
+        <section class="panel table-panel">
+          <div class="panel-header"><div><h2>Numerical vs. analytical</h2><p>Relative error is shown as a percentage</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Quantity</th><th>Numerical</th><th>Analytical</th><th>Error</th></tr></thead><tbody id="validation-table"><tr><td colspan="4" class="empty-cell">Run a simulation to compare values.</td></tr></tbody></table></div>
+        </section>
+        <p class="small-disclaimer">This validation is limited to the ideal assumptions and R-load cases implemented in this starter.</p>
+      </section>
+
+      <section class="tab-panel" id="panel-guide">
+        <div class="section-intro"><div class="eyebrow">GETTING STARTED</div><h2>Quick guide</h2><p>A short guide to using the simulator workspace.</p></div>
+        <div class="guide-grid">
+          <article class="guide-card"><span class="guide-number">01</span><h3>Configure the circuit</h3><p>Select one of the four single-phase topologies, choose a diode or thyristor, then enter the source and load parameters.</p></article>
+          <article class="guide-card"><span class="guide-number">02</span><h3>Run the simulation</h3><p>Click Run simulation. The Python backend validates the input and calculates the response for the selected supported circuit configuration.</p></article>
+          <article class="guide-card"><span class="guide-number">03</span><h3>Inspect the results</h3><p>Inspect the peak, average and RMS measurements. Use Download PNG, Zoom In and Zoom Out to work with the graph, or export the waveform samples as a CSV file.</p></article>
+          <article class="guide-card"><span class="guide-number">04</span><h3>Review analysis</h3><p>Open Harmonics to inspect the source-current spectrum and THD, or Validation to compare average and RMS voltage against theory.</p></article>
+        </div>
+        <div class="notice guide-notice">
+          <span class="notice-icon">i</span>
+          <span>
+            R-L simulation is supported for the full-wave bridge and centre-tapped
+            rectifier with an uncontrolled diode. R-L netlist export remains limited
+            to the full-wave bridge with an uncontrolled diode. Generated netlists
+            have not yet been independently validated in PSpice.
+          </span>
+        </div>
+      </section>
+
+      <footer class="main-footer"><span>RectiLab <b>·</b> OOAD project</span><span>Python · Flask · Plotly</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden" role="alert"></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
