@@ -1,10 +1,15 @@
 # Virtual environments
 .venv/
 venv/
+env/
+ENV/
 
 # Python cache
 __pycache__/
 *.py[cod]
+*$py.class
+
+# Pytest
 .pytest_cache/
 
 # Environment variables
@@ -15,3 +20,13 @@ instance/
 
 # IDE settings
 .vscode/
+
+# Python build and distribution
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
